@@ -1,0 +1,363 @@
+import os
+import math
+import pickle
+import string
+from collections import defaultdict, Counter # Counter is used for counting frequencies of hashable objects.
+
+from nltk.stem import PorterStemmer
+
+from .search_utils import (
+    BM25_K1,
+    CACHE_DIR,
+    DEFAULT_SEARCH_LIMIT,
+    STOPWORDS_PATH,
+    load_golden_dataset,
+    load_movies,
+)
+
+
+class InvertedIndex:
+
+    BM25_K1 =1.5
+
+    
+    def __init__(self) -> None:
+        self.index = defaultdict(set)
+        self.docmap: dict[int,dict] = {}
+        self.term_frequencies = {} #  keeping track of how many times each term appears in each document
+        self.doc_lengths = defaultdict(int)
+        self.doc_lengths_path= os.path.join(CACHE_DIR,"doc_lengths.pkl")
+        
+
+
+
+    def get_document(self,term):
+        # Look up the term if the term doesn't exist return an empty set
+        # 
+        doc_ids = self.index.get(term,set())
+
+        return sorted(list(doc_ids))
+
+
+    def load(self):
+
+        idx_path = os.path.join(CACHE_DIR,"index.pkl")
+        doc_path = os.path.join(CACHE_DIR,"docmap.pkl")
+        frequency = os.path.join(CACHE_DIR,"term_frequencies.pkl")
+
+        
+
+        if not os.path.exists(idx_path) or not os.path.exists(doc_path) or not os.path.exists(frequency):
+            
+            raise FileNotFoundError("The file cannot be found")
+        
+        
+        with open("cache/index.pkl","rb") as f:
+            self.index = pickle.load(f)
+            
+
+        with open("cache/docmap.pkl","rb") as f:
+            self.docmap = pickle.load(f)
+
+        
+        with open("cache/term_frequencies.pkl","rb") as f:
+             self.term_frequencies = pickle.load(f)
+
+        with open(self.doc_lengths_path,"wb") as f:
+              pickle.dump(self.doc_lengths,f)
+        
+
+    def build(self):
+        movies = load_movies()
+
+        for movie in movies:
+            doc_id = movie['id']
+
+            self.docmap[doc_id] = movie
+
+
+            text_to_index = f"{movie['title']} {movie['description']}"
+
+            self.__add_document(doc_id,text_to_index)
+
+    def save(self):
+        
+
+        if not os.path.exists("cache"):
+            os.makedirs("cache")
+
+        
+        with open("cache/index.pkl","wb") as f:
+            pickle.dump(self.index,f)
+
+
+        with open("cache/docmap.pkl","wb") as f:
+            pickle.dump(self.docmap,f)
+            
+
+        with open("cache/term_frequencies.pkl","wb") as f:
+            
+            pickle.dump(self.term_frequencies,f)
+
+        with open(self.doc_lengths_path,"wb") as f:
+            pickle.dump(self.doc_lengths,f)
+        
+
+    def __add_document(self, doc_id,text_to_index):
+        tokens = tokenize_text(text_to_index)
+
+        for token in tokens:
+            self.index[token].add(doc_id)
+
+
+        doc_tokens= len([self.index[i] for i in self.index])  # Total number of tokens for each document
+        self.doc_lengths[doc_id] = doc_tokens # Storing it in a defaultdict
+
+        
+
+        self.term_frequencies[doc_id] = Counter(tokens) # If Document 4651 has the clean tokens ["brave", "princess", "brave"], self.term_frequencies[4651] becomes: Counter({"brave": 2, "princess": 1})
+       # print(type(self.term_frequencies))
+        print(self.term_frequencies[doc_id])
+
+
+    def idf(self, term:str)->float:
+        # 1. Load the index and docmap into memory using your class method
+        try:
+            self.load()
+        except FileNotFoundError:
+            print("Error: The index files were not found. Please run 'build' first.")
+            
+
+        # 2. Extract the clean, single string token from the tokenized list
+        tokens = self.tokenize_term(term)
+        if not tokens:
+            print("Error: Provided term produced no valid tokens.")
+            return
+        t = tokens
+
+        # 3. Calculate total documents (N) from the docmap
+        doc_count = len(self.docmap)
+
+        # 4. Safely get Document Frequency (DF). Fallback to empty set if token is missing.
+        matching_docs = self.index.get(t, set())
+        df_count = len(matching_docs)
+
+        # 5. Apply the corrected smoothed IDF formula
+        IDF = math.log((doc_count + 1) / (df_count + 1))
+
+        # 6. Print the final calculated value
+        return IDF
+
+
+
+    def tfidf(self,term: str,doc_id: int):
+        
+        try:
+            self.load()
+
+        except FileNotFoundError:
+               print("index files not found, run build first.. ")
+
+
+        # Formula: TF-IDF = TF * IDF
+
+        TF = self.tf(doc_id,term)
+
+        IDF  = self.idf(term)
+
+        tf_idf = TF*IDF
+        
+        return tf_idf
+             
+
+
+#    def bm25_idf_command(self,term):
+        
+    def bm25idf(self,term)->float:
+        single_term = self.tokenize_term(term)
+
+        try:
+            self.load()
+
+        except FileNotFoundError:
+
+               print("FIle not found")
+
+        N = len(self.docmap)
+    
+    
+        matching_docs = self.index.get(single_term, set())
+        df = len(matching_docs)
+
+
+        
+        result= math.log((N-df + 0.5)/(df+0.5)+1)
+        return result
+    
+
+
+    def get_bm25_tf(self,doc_id,term,k1= BM25_K1):
+
+        try:
+           self.load()
+
+        except FileNotFoundError:
+             print("File not found")
+
+             
+        raw_tf = self.tf(doc_id,term)
+
+        tf_component = (raw_tf*(k1+1))/(raw_tf+k1)
+
+        return tf_component
+        
+        
+        
+        
+        
+            
+
+    def tokenize_term(self, TERM):
+        
+        try:
+            term_tokenize = tokenize_text(TERM)
+
+            if not (len(term_tokenize)) == 1:
+                raise ValueError("No single token recieved ")
+
+            return term_tokenize[0] # returning the token as a string
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+    def tf(self, doc_id, term) -> int:
+
+        final_term = self.tokenize_term(term)
+
+        doc_counter = self.term_frequencies.get(doc_id, {})# # State of doc_counter: Counter({"brave": 2, "princess": 2, "merida": 1})
+
+        return doc_counter.get(final_term, 0)  # Get the count of the term. If it's not in the Counter, it safely returns 0
+
+
+
+    def __get_avg_doc_length(self)->float:
+        try:
+
+          self.load()
+
+        except FileNotFoundError:
+             print("not found")
+
+
+        for i in self.doc_lengths:
+            
+
+             
+
+
+        
+        
+
+                
+        
+        
+        
+
+        
+
+def bm25_tf_command(doc_id: int, term: str, k1: float = BM25_K1):
+    idx = InvertedIndex()
+    idx.load()
+    tokenizeTerm = idx.tokenize_term(term)
+    
+    return idx.get_bm25_tf(doc_id, tokenizeTerm, k1)
+        
+
+def build_command() -> None:
+    idx = InvertedIndex()
+    idx.build()
+    idx.save()
+    
+   # print(f"First document for token 'merida' = {docs[0]}")
+
+
+def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
+
+    idx = InvertedIndex()
+
+
+    try:
+        idx.load()
+
+    except FileNotFoundError as e:
+        print(f"Error{e}")
+        return
+       
+    
+    tokenize = tokenize_text(query)
+    results = []
+
+    seen_doc_ids = set()# Tracks unique movies so we don't return duplicates
+
+    for token in tokenize:
+
+        matched_ids = idx.get_document(token) # gets the ID assigned to the token in self.index.
+
+        for doc_id in matched_ids:
+
+            if doc_id not in seen_doc_ids:
+                seen_doc_ids.add(doc_id)
+
+            movie = idx.docmap[doc_id]
+            results.append(movie)
+
+            #print(f"[{movie['id']}] [{movie['title']}]")
+
+            if len(results)>=limit:
+                return results
+
+            
+    
+    
+
+    return results
+
+
+def has_matching_token(query_tokens: list[str], title_tokens: list[str]) -> bool:
+    for query_token in query_tokens:
+        for title_token in title_tokens:
+            if query_token in title_token:
+                return True
+    return False
+
+
+def preprocess_text(text: str) -> str:
+    text = text.lower()
+    text = text.translate(str.maketrans("", "", string.punctuation))
+    return text
+
+
+def load_stopwords() -> list[str]:
+    with open(STOPWORDS_PATH, "r") as f:
+        return [preprocess_text(word) for word in f.read().splitlines()]
+
+
+STOPWORDS = load_stopwords()
+
+
+def tokenize_text(text: str) -> list[str]:
+    text = preprocess_text(text)
+    tokens = text.split()
+    valid_tokens = []
+    for token in tokens:
+        if token:
+            valid_tokens.append(token)
+    filtered_words = []
+    for word in valid_tokens:
+        if word not in STOPWORDS:
+            filtered_words.append(word)
+    stemmer = PorterStemmer()
+    stemmed_words = []
+    for word in filtered_words:
+        stemmed_words.append(stemmer.stem(word))
+    return stemmed_words
