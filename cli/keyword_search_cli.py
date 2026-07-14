@@ -2,7 +2,7 @@
 
 import argparse
 
-from lib.search_utils import BM25_K1
+from lib.search_utils import BM25_K1, BM25_B
 from lib.keyword_search import build_command,bm25_tf_command,search_command,InvertedIndex
 
 def main() -> None:
@@ -33,6 +33,7 @@ def main() -> None:
     bm25_tf_parser.add_argument("doc_id",type=int,help="Document iD")
     bm25_tf_parser.add_argument("term",type=str,help = "The term")
     bm25_tf_parser.add_argument("k1",type=float,nargs='?',default=BM25_K1,help="Tunable parameter")
+    bm25_tf_parser.add_argument("b", type=float, nargs='?', default=BM25_B, help="Tunable BM25 b parameter")
     
     
 
@@ -67,9 +68,11 @@ def main() -> None:
 
 
         case "bm25tf":
-            score = bm25_tf_command(args.doc_id, args.term, args.k1)
+            score = bm25_tf_command(args.doc_id, args.term, args.k1,args.b)
+            
             print(
                 f"BM25 TF score of {args.term} in document {args.doc_id}: {score:.2f}"
+                
             )
             
             

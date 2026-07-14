@@ -8,6 +8,7 @@ from nltk.stem import PorterStemmer
 
 from .search_utils import (
     BM25_K1,
+    BM25_B,
     CACHE_DIR,
     DEFAULT_SEARCH_LIMIT,
     STOPWORDS_PATH,
@@ -25,7 +26,7 @@ class InvertedIndex:
         self.index = defaultdict(set)
         self.docmap: dict[int,dict] = {}
         self.term_frequencies = {} #  keeping track of how many times each term appears in each document
-        self.doc_lengths = defaultdict(int)
+        self.doc_lengths: dict[int, int] = {}
         self.doc_lengths_path= os.path.join(CACHE_DIR,"doc_lengths.pkl")
         
 
@@ -63,8 +64,8 @@ class InvertedIndex:
         with open("cache/term_frequencies.pkl","rb") as f:
              self.term_frequencies = pickle.load(f)
 
-        with open(self.doc_lengths_path,"wb") as f:
-              pickle.dump(self.doc_lengths,f)
+        with open(self.doc_lengths_path,"rb") as f:
+            self.doc_lengths = pickle.load(f)
         
 
     def build(self):
@@ -110,14 +111,14 @@ class InvertedIndex:
             self.index[token].add(doc_id)
 
 
-        doc_tokens= len([self.index[i] for i in self.index])  # Total number of tokens for each document
-        self.doc_lengths[doc_id] = doc_tokens # Storing it in a defaultdict
+#        self.term_frequencies[doc_id].update(tokens) # Total number of tokens for each document
+        self.doc_lengths[doc_id] = len(tokens) # Storing it in a defaultdict
 
         
 
         self.term_frequencies[doc_id] = Counter(tokens) # If Document 4651 has the clean tokens ["brave", "princess", "brave"], self.term_frequencies[4651] becomes: Counter({"brave": 2, "princess": 1})
        # print(type(self.term_frequencies))
-        print(self.term_frequencies[doc_id])
+       # print(self.term_frequencies[doc_id])
 
 
     def idf(self, term:str)->float:
@@ -196,21 +197,26 @@ class InvertedIndex:
     
 
 
-    def get_bm25_tf(self,doc_id,term,k1= BM25_K1):
+    def get_bm25_tf(self,doc_id,term,k1= BM25_K1,b = BM25_B):       
 
-        try:
-           self.load()
+        """
+        Calculates the length-normalized BM25 Term Frequency component.
+        Assumes load() has already been called before running queries.
+        """
 
-        except FileNotFoundError:
-             print("File not found")
-
-             
-        raw_tf = self.tf(doc_id,term)
-
-        tf_component = (raw_tf*(k1+1))/(raw_tf+k1)
-
-        return tf_component
         
+        doc_id = int(doc_id)  # Guard against string IDs from CLI
+        tf = self.tf(doc_id, term)
+        doc_length = self.doc_lengths.get(doc_id, 0)
+        avg_doc_length = self.__get_avg_doc_length()
+
+        if avg_doc_length > 0:
+            length_norm = 1 - b + b * (doc_length / avg_doc_length)
+        else:
+            length_norm = 1.0
+
+        return (tf * (k1 + 1)) / (tf + k1 * length_norm)
+
         
         
         
@@ -232,26 +238,22 @@ class InvertedIndex:
 
     def tf(self, doc_id, term) -> int:
 
-        final_term = self.tokenize_term(term)
+       # final_term = self.tokenize_term(term)
+       #
+        doc_id = int(doc_id)
 
         doc_counter = self.term_frequencies.get(doc_id, {})# # State of doc_counter: Counter({"brave": 2, "princess": 2, "merida": 1})
 
-        return doc_counter.get(final_term, 0)  # Get the count of the term. If it's not in the Counter, it safely returns 0
+        return doc_counter.get(term, 0)  # Get the count of the term. If it's not in the Counter, it safely returns 0
 
 
 
     def __get_avg_doc_length(self)->float:
-        try:
 
-          self.load()
-
-        except FileNotFoundError:
-             print("not found")
-
-
-        for i in self.doc_lengths:
-            
-
+        if not self.doc_lengths or len(self.doc_lengths) == 0:
+            return 0.0
+        
+        return sum(self.doc_lengths.values()) / len(self.doc_lengths)
              
 
 
@@ -265,12 +267,17 @@ class InvertedIndex:
 
         
 
-def bm25_tf_command(doc_id: int, term: str, k1: float = BM25_K1):
+def bm25_tf_command(doc_id: int, term: str, k1: float = BM25_K1,b = BM25_B):
+
+    doc_id = int(doc_id)
     idx = InvertedIndex()
     idx.load()
+
+    
+    print("DEBUG - Tokens in Doc 1:", idx.term_frequencies.get(doc_id, {}))
     tokenizeTerm = idx.tokenize_term(term)
     
-    return idx.get_bm25_tf(doc_id, tokenizeTerm, k1)
+    return idx.get_bm25_tf(doc_id, tokenizeTerm, k1,b)
         
 
 def build_command() -> None:
