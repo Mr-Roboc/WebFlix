@@ -260,46 +260,11 @@ class InvertedIndex:
         
         
 
-    def bm25(self,doc_id:int,term:str)->float:
-
-
-        bm25_tf_score = self.get_bm25_tf(doc_id,term)
-        bm25_idf_score = self.bm25idf(term)
-
-        return bm25_tf_score*bm25_idf_score # bm25 score
+                
         
         
-    def bm25_search(self,query:str,limit=5):
-        scores= {} # dictionary to map documents to its scores
-                
-        query_tokenize = tokenize_text(query)
+        
 
-        for doc_id  in self.docmap:
-            total_score = 0.0
-            
-            for token in query_tokenize:
-                total_score += self.bm25(doc_id,token)
-                
-                
-                #self.score_dict[id_set]= self.bm25(id_set,token)
-                scores[doc_id] = total_score
-                
-
-
-        # Sort the documents by score in descending order.
-        sort_scores= dict(sorted(scores.items(), key=lambda item: item[1],reverse = True))
-
-
-        # Retrieve the top results
-        results = []
-        for doc_id, score in sort_scores[:limit]:
-            movie = self.docmap[doc_id]
-            results.append((movie,score))
-
-        return results
-            
-            
-            
         
 
 def bm25_tf_command(doc_id: int, term: str, k1: float = BM25_K1,b = BM25_B):
