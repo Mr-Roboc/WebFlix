@@ -238,8 +238,7 @@ class InvertedIndex:
 
     def tf(self, doc_id, term) -> int:
 
-       # final_term = self.tokenize_term(term)
-       #
+       
         doc_id = int(doc_id)
 
         doc_counter = self.term_frequencies.get(doc_id, {})# # State of doc_counter: Counter({"brave": 2, "princess": 2, "merida": 1})
@@ -254,8 +253,63 @@ class InvertedIndex:
             return 0.0
         
         return sum(self.doc_lengths.values()) / len(self.doc_lengths)
+
+    def bm25(self,doc_id,term):
+
+        bm25_tf_score =self.get_bm25_tf(doc_id,term)
+        bm25_idf_score = self.bm25idf(term)
+
+        return bm25_tf_score * bm25_idf_score
+
+
+    def bm25_search(self,query, limit=5):
+        self.load()
+
+        query_tokenize = tokenize_text(query)
+        print(query_tokenize)
+
+        scores = {}
+
+    
+    
+
+        for doc_id in self.docmap:
+             total_score = 0.0
+
+             for query_token in query_tokenize:
+                   total_score += self.bm25(doc_id,query_token)
+                   
+             scores[doc_id] = total_score
+
+
+        print(scores)
+
+
+
+        # sorting the documents by score in descending order.
+
+        sorted_scores = sorted(scores.items(),key=lambda x:x[1], reverse = True)
+
+        
+        results = []
+        for doc_id, score in sorted_scores[:limit]:
+            movie = self.docmap[doc_id]
+            results.append((movie, score))  # Return tuple of (movie_dict, score)
+
+        return results
+
+
+        
+            
+                     
+
              
 
+            
+        
+
+        
+        
 
         
         
