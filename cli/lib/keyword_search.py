@@ -282,7 +282,8 @@ class InvertedIndex:
              scores[doc_id] = total_score
 
 
-        print(scores)
+
+       # print(scores)
 
 
 
