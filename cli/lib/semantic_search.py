@@ -65,6 +65,12 @@ class SemanticSearch:
            
             
         return self.build_embeddings(documents)
+
+
+    
+
+        
+        
             
 
 def embed_text(text):
@@ -87,3 +93,12 @@ def verify_embeddings():
 
     print(f"Number of docs:   {len(documents)}")
     print(f"Embeddings shape: {embeddings.shape[0]} vectors in {embeddings.shape[1]} dimensions")
+
+
+def embed_query(query:str):
+    s = SemanticSearch()
+
+    embedding = s.generate_embedding(query)
+    print(f"Query: {query}")
+    print(f"First 3 dimensions: {embedding[:3]}")
+    print(f"Shape: {embedding.shape[0]}") # returns tuple : (no of times,vector size)
