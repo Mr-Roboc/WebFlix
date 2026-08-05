@@ -1,3 +1,5 @@
+from numpy.linalg import norm
+
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from pathlib import Path
@@ -26,9 +28,9 @@ class SemanticSearch:
 
         # Generating an embedding for the input text and returns a list of 384 floating point numbers.
 
-        return self.model.encode([text])[0] # We only care about the first element from the output list..
+        return self.model.encode([text])
 
-    def build_embeddings(self,documents:list[dict]):
+    def build_embeddings(self,documents):
         self.document_map = {}
         self.documents = documents
         movie_list = []
@@ -41,8 +43,7 @@ class SemanticSearch:
 
 
         # .encode() on movie_list
-
-        self.embeddings = self.model.encode(movie_list,show_progress_bar = True)
+        self.embeddings = self.model.encode(movie_list,show_progress_bar = True) # self.embeddings stores an ndarray of document embeddings
         
         np.save(self.embeddings_path,self.embeddings)
         
@@ -67,18 +68,56 @@ class SemanticSearch:
         return self.build_embeddings(documents)
 
 
-    
+    # search function
 
-        
-        
+    def search(self,query,limit):
+
+        if self.embeddings is None:
+            raise ValueError("No embeddings loaded, Call load_embeddings method first")
+
+
+        # Generate a single query vector.
+        query_embedding  = self.generate_embedding(query)
+
+        results = []
+
+
+        # Comparing the query vector with each document embedding
+        for doc_embed, doc in zip(self.embeddings,self.documents):
+            score = cosine_similarity(query_embedding,doc_embed)
+            results.append((score,doc))
+
+
+
+
+        # Sort descending by similarity score
+        results.sort(key=lambda x: x[0], reverse=True)
+
+        score_list = []
+        for sc,doc in results[:limit]:
             
+            score_list.append({'score': sc, 'title': doc['title']})
 
-def embed_text(text):
-    ss = SemanticSearch()
-    embedding = ss.generate_embedding(text)
-    print(f"Text: {text}")
-    print(f"First 3 dimensions: {embedding[:3]}")
-    print(f"Dimensions: {embedding.shape[0]}")
+
+        return score_list
+
+        
+                
+
+def search(query,limit):
+
+    s = SemanticSearch()
+    movies = load_movies()
+    
+    s.load_embeddings(movies)
+
+    search_result = s.search(query,limit)
+
+    for idx,res in enumerate(search_result):
+
+        print(idx,res['title'], ":", "Score : ", res['score'])
+       
+        
         
 def verify_model():
     s = SemanticSearch()
@@ -102,3 +141,25 @@ def embed_query(query:str):
     print(f"Query: {query}")
     print(f"First 3 dimensions: {embedding[:3]}")
     print(f"Shape: {embedding.shape[0]}") # returns tuple : (no of times,vector size)
+
+
+def cosine_similarity(vec1:np.ndarray,vec2:np.ndarray): # The two input vectors are basically the query and movie embeddings.
+    dot_product = np.dot(vec1,vec2)
+    norm_1 = np.linalg.norm(vec1) # calculates the math norm of the vector
+    norm_2 = np.linalg.norm(vec2)
+    if norm_1==0 or norm_2 ==0:
+        return 0.0
+
+
+    return dot_product/(norm_1*norm_2)
+
+
+
+
+
+
+
+               
+
+
+    
