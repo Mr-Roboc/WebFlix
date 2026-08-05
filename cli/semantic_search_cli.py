@@ -1,5 +1,5 @@
 import argparse
-from lib.semantic_search import verify_model, embed_text, verify_embeddings,embed_query
+from lib.semantic_search import verify_model, verify_embeddings,embed_query,search
 import lib.search_utils
 
 def main() -> None:
@@ -20,6 +20,13 @@ def main() -> None:
     query_embed = subparsers.add_parser("embed_query",help ="Embeds the query")
 
     query_embed.add_argument("query",help = "Enter the query")
+
+    search_parser = subparsers.add_parser("search", help = "Semantic search")
+    search_parser.add_argument("query",help = "String query")
+    search_parser.add_argument("--limit",type= int,help="Number of results")
+    
+
+    
     
     
     # Parse incoming termainl execution
@@ -45,5 +52,10 @@ def main() -> None:
         case "embed_query":
             embed_query(args.query)
 
+        case "search":
+            search(args.query,args.limit)
+    
+    
+            
 if __name__ == "__main__":
     main()
