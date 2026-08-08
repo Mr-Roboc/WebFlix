@@ -1,5 +1,5 @@
 import argparse
-from lib.semantic_search import verify_model, verify_embeddings,embed_query,search
+from lib.semantic_search import verify_model, verify_embeddings,embed_query,search,chunk_text
 import lib.search_utils
 
 def main() -> None:
@@ -24,8 +24,18 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help = "Semantic search")
     search_parser.add_argument("query",help = "String query")
     search_parser.add_argument("--limit",type= int,help="Number of results")
+
+    chunk_parser = subparsers.add_parser("chunk" , help="Chunks the document")
+    chunk_parser.add_argument("text",help="The text to be chunked")
+    chunk_parser.add_argument("--chunk-size",type = int,help = "Chunk size")
+    chunk_parser.add_argument("--overlap",type = int,help = "overlaps the chunk")
+
+
+
+    
     
 
+    
     
     
     
@@ -35,9 +45,10 @@ def main() -> None:
 
     
     match args.command:
-        
-#        case _:
- #           parser.print_help()
+
+
+        case "chunk":
+              chunk_text(args.text, args.overlap,args.chunk_size)
 
         case "verify":
             verify_model()
