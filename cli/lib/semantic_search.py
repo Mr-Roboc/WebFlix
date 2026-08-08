@@ -154,6 +154,41 @@ def cosine_similarity(vec1:np.ndarray,vec2:np.ndarray): # The two input vectors 
     return dot_product/(norm_1*norm_2)
 
 
+def fixed_size(text:str,overlap,chunk_size:int)->list:
+
+    words = text.split(" ")
+
+    chunks = []
+
+    step_size = chunk_size-overlap
+    for i in range(0,len(words),step_size):
+        chunk_words = words[i:i+chunk_size]
+        if len(chunk_words)<=overlap:
+            break
+            
+        chunks.append(" ".join(words[i:i+chunk_size]))
+
+    return chunks
+
+
+def chunk_text(text,overlap,chunk_size):
+    chunks = fixed_size(text,overlap,chunk_size)
+
+
+
+    print(f"Chunking {len(text)} characters")
+
+    for idx, chunk in enumerate(chunks,1):
+        print(idx,chunk)
+
+            
+
+    
+            
+        
+    
+
+
 
 
 
