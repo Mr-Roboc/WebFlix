@@ -1,6 +1,8 @@
 import argparse
-from os import SCHED_BATCH
-from lib.semantic_search import verify_model, verify_embeddings,embed_query,search,chunk_text,semantic_chunk_text
+
+
+
+from lib.semantic_search import verify_model, verify_embeddings,embed_query,search,chunk_text,semantic_chunk_text,embedded_chunk
 import lib.search_utils
 
 def main() -> None:
@@ -32,13 +34,13 @@ def main() -> None:
     chunk_parser.add_argument("--overlap",type = int,help = "overlaps the chunk")
 
 
-    semchunk = subparsers.add_parser("sem_chunk", help=  "Semantic chunking")
-    semchunk.add_argument("text",help = "The text to chunk")
+    sem_chunk = subparsers.add_parser("sem_chunk", help=  "Semantic chunking")
+    sem_chunk.add_argument("text",help = "The text to chunk")
 
-    semchunk.add_argument("--max-chunk-size",type=int,help="Max chunk_size")
-    semchunk.add_argument("--overlap",type=int,help = "The overlap value")
+    sem_chunk.add_argument("--max-chunk-size",type=int,help="Max chunk_size")
+    sem_chunk.add_argument("--overlap",type=int,help = "The overlap value")
 
-
+    embed_chunks= subparsers.add_parser("chunk_embed" , help = "")
     
 
     
@@ -58,7 +60,7 @@ def main() -> None:
 
         case "embed":
             print(f"Encoding: {args.text} \n ")
-            embed_text(args.text)
+            embed_query(args.text)
 
         case "verify_embed":
             verify_embeddings()
@@ -72,7 +74,10 @@ def main() -> None:
 
         case "sem_chunk":
             semantic_chunk_text(args.text,args.overlap,args.max_chunk_size)
-            
+
+        case "chunk_embed":
+            embedded_chunk()
+              
     
             
 if __name__ == "__main__":
