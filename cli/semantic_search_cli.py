@@ -1,5 +1,6 @@
 import argparse
-from lib.semantic_search import verify_model, verify_embeddings,embed_query,search,chunk_text
+from os import SCHED_BATCH
+from lib.semantic_search import verify_model, verify_embeddings,embed_query,search,chunk_text,semantic_chunk_text
 import lib.search_utils
 
 def main() -> None:
@@ -31,13 +32,15 @@ def main() -> None:
     chunk_parser.add_argument("--overlap",type = int,help = "overlaps the chunk")
 
 
+    semchunk = subparsers.add_parser("sem_chunk", help=  "Semantic chunking")
+    semchunk.add_argument("text",help = "The text to chunk")
+
+    semchunk.add_argument("--max-chunk-size",type=int,help="Max chunk_size")
+    semchunk.add_argument("--overlap",type=int,help = "The overlap value")
+
 
     
-    
 
-    
-    
-    
     
     # Parse incoming termainl execution
 
@@ -65,7 +68,11 @@ def main() -> None:
 
         case "search":
             search(args.query,args.limit)
-    
+
+
+        case "sem_chunk":
+            semantic_chunk_text(args.text,args.overlap,args.max_chunk_size)
+            
     
             
 if __name__ == "__main__":
