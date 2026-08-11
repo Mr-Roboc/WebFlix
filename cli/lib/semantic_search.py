@@ -1,5 +1,7 @@
 from numpy.linalg import norm
 
+import re
+
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from pathlib import Path
@@ -181,13 +183,41 @@ def chunk_text(text,overlap,chunk_size):
     for idx, chunk in enumerate(chunks,1):
         print(idx,chunk)
 
-            
+def semantic_chunk(text:str, overlap:int, max_chunk_size):
+    sentences = re.split(r"(?<=[.!?])\s+",text)
 
-    
-            
+    chunked_strings = []
+
+
+    step_size = max_chunk_size - overlap
+
+    for i in range(0,len(sentences),step_size):
+
+        chunk_sentences = sentences[i:i+max_chunk_size]
         
+        if len(chunk_sentences)<=overlap:
+            break
+
+
+        chunked_strings.append("".join(sentences))
+        
+
+    return chunked_strings
+            
+
     
 
+
+
+def semantic_chunk_text(text,overlap=0,max_chunk_size=4):
+    chunks = semantic_chunk(text,overlap,max_chunk_size)
+
+
+
+    print(f"Chunking {len(text)} characters")
+
+    for idx, chunk in enumerate(chunks,1):
+        print(idx,chunk)
 
 
 
