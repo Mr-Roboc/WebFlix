@@ -1,1 +1,1 @@
-This repository contains everything about building a RAG search_engine
+Semantic and hybrid search engine for streaming platforms built with Python and RAG.
