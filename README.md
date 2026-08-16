@@ -1,1 +1,1 @@
-This repository contains everything about building a RAG search_engine
+Everything about Semantic Search built from scratch
