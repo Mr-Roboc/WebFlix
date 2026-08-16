@@ -2,7 +2,7 @@ import argparse
 
 
 
-from lib.semantic_search import verify_model, verify_embeddings,embed_query,search,chunk_text,semantic_chunk_text,embedded_chunk
+from lib.semantic_search import verify_model, verify_embeddings,embed_query,search,chunk_text,semantic_chunk_text,embedded_chunk,chunk_search
 import lib.search_utils
 
 def main() -> None:
@@ -41,8 +41,11 @@ def main() -> None:
     sem_chunk.add_argument("--overlap",type=int,help = "The overlap value")
 
     embed_chunks= subparsers.add_parser("chunk_embed" , help = "")
-    
 
+    search_chunk = subparsers.add_parser("search_chunk" , help = "Search the chunk")
+    search_chunk.add_argument("query")
+    search_chunk.add_argument("--limit" , type= int)
+    
     
     # Parse incoming termainl execution
 
@@ -77,6 +80,10 @@ def main() -> None:
 
         case "chunk_embed":
             embedded_chunk()
+
+        case "search_chunk":
+            chunk_search(args.query,args.limit)
+            
               
     
             
