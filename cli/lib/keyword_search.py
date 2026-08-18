@@ -259,6 +259,8 @@ class InvertedIndex:
 
 
     def bm25_search(self,query, limit=5):
+
+        # Load from disk once before looping.
         if not self.index or not self.docmap:
             self.load()
 
