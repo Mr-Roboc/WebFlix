@@ -177,12 +177,8 @@ class InvertedIndex:
     def bm25idf(self,term)->float:
         single_term = self.tokenize_term(term)
 
-        try:
-            self.load()
-
-        except FileNotFoundError:
-
-               print("FIle not found")
+        if not single_term:
+            return 0.0
 
         N = len(self.docmap)
     
@@ -263,7 +259,8 @@ class InvertedIndex:
 
 
     def bm25_search(self,query, limit=5):
-        self.load()
+        if not self.index or not self.docmap:
+            self.load()
 
         query_tokenize = tokenize_text(query)
         print(query_tokenize)
