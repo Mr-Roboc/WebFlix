@@ -33,8 +33,8 @@ class InvertedIndex:
 
 
     def get_document(self,term):
+
         # Look up the term if the term doesn't exist return an empty set
-        # 
         doc_ids = self.index.get(term,set())
 
         return sorted(list(doc_ids))
@@ -42,13 +42,12 @@ class InvertedIndex:
 
     def load(self):
 
-        idx_path = os.path.join(CACHE_DIR,"index.pkl")
-        doc_path = os.path.join(CACHE_DIR,"docmap.pkl")
+        
         frequency = os.path.join(CACHE_DIR,"term_frequencies.pkl")
 
         
 
-        if not os.path.exists(idx_path) or not os.path.exists(doc_path) or not os.path.exists(frequency):
+        if not os.path.exists(self.idx_path) or not os.path.exists(self.doc_path) or not os.path.exists(frequency):
             
             raise FileNotFoundError("The file cannot be found")
         
@@ -111,14 +110,13 @@ class InvertedIndex:
             self.index[token].add(doc_id)
 
 
-#        self.term_frequencies[doc_id].update(tokens) # Total number of tokens for each document
+ 
         self.doc_lengths[doc_id] = len(tokens) # Storing it in a defaultdict
 
         
 
         self.term_frequencies[doc_id] = Counter(tokens) # If Document 4651 has the clean tokens ["brave", "princess", "brave"], self.term_frequencies[4651] becomes: Counter({"brave": 2, "princess": 1})
-       # print(type(self.term_frequencies))
-       # print(self.term_frequencies[doc_id])
+       #
 
 
     def idf(self, term:str)->float:
@@ -237,7 +235,7 @@ class InvertedIndex:
        
         doc_id = int(doc_id)
 
-        doc_counter = self.term_frequencies.get(doc_id, {})# # State of doc_counter: Counter({"brave": 2, "princess": 2, "merida": 1})
+        doc_counter = self.term_frequencies.get(doc_id, {})# State of doc_counter: Counter({"brave": 2, "princess": 2, "merida": 1})
 
         return doc_counter.get(term, 0)  # Get the count of the term. If it's not in the Counter, it safely returns 0
 
@@ -282,12 +280,10 @@ class InvertedIndex:
 
 
 
-       # print(scores)
-
+       
 
 
         # sorting the documents by score in descending order.
-
         sorted_scores = sorted(scores.items(),key=lambda x:x[1], reverse = True)
 
         
@@ -339,7 +335,7 @@ def build_command() -> None:
     idx.build()
     idx.save()
     
-   # print(f"First document for token 'merida' = {docs[0]}")
+   #
 
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
@@ -372,7 +368,6 @@ def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
             movie = idx.docmap[doc_id]
             results.append(movie)
 
-            #print(f"[{movie['id']}] [{movie['title']}]")
 
             if len(results)>=limit:
                 return results
