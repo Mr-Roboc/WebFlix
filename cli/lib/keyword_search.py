@@ -33,8 +33,7 @@ class InvertedIndex:
 
 
     def get_document(self,term):
-        # Look up the term if the term doesn't exist return an empty set
-        # 
+      
         doc_ids = self.index.get(term,set())
 
         return sorted(list(doc_ids))
@@ -111,14 +110,12 @@ class InvertedIndex:
             self.index[token].add(doc_id)
 
 
-#        self.term_frequencies[doc_id].update(tokens) # Total number of tokens for each document
         self.doc_lengths[doc_id] = len(tokens) # Storing it in a defaultdict
 
         
 
         self.term_frequencies[doc_id] = Counter(tokens) # If Document 4651 has the clean tokens ["brave", "princess", "brave"], self.term_frequencies[4651] becomes: Counter({"brave": 2, "princess": 1})
-       # print(type(self.term_frequencies))
-       # print(self.term_frequencies[doc_id])
+      
 
 
     def idf(self, term:str)->float:
@@ -282,13 +279,6 @@ class InvertedIndex:
              scores[doc_id] = total_score
 
 
-
-       # print(scores)
-
-
-
-        # sorting the documents by score in descending order.
-
         sorted_scores = sorted(scores.items(),key=lambda x:x[1], reverse = True)
 
         
@@ -304,22 +294,7 @@ class InvertedIndex:
             
                      
 
-             
-
             
-        
-
-        
-        
-
-        
-        
-
-                
-        
-        
-        
-
         
 
 def bm25_tf_command(doc_id: int, term: str, k1: float = BM25_K1,b = BM25_B):
