@@ -45,8 +45,7 @@ class InvertedIndex:
         doc_path = os.path.join(CACHE_DIR,"docmap.pkl")
         frequency = os.path.join(CACHE_DIR,"term_frequencies.pkl")
 
-        
-
+    
         if not os.path.exists(idx_path) or not os.path.exists(doc_path) or not os.path.exists(frequency):
             
             raise FileNotFoundError("The file cannot be found")
@@ -168,8 +167,6 @@ class InvertedIndex:
         return tf_idf
              
 
-
-#    def bm25_idf_command(self,term):
         
     def bm25idf(self,term)->float:
         single_term = self.tokenize_term(term)
