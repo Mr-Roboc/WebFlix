@@ -40,10 +40,9 @@ class InvertedIndex:
 
 
     def load(self):
-
-
+        idx_path = os.path.join(CACHE_DIR,"index.pkl")
+        doc_path = os.path.join(CACHE_DIR,"docmap.pkl")
         frequency = os.path.join(CACHE_DIR,"term_frequencies.pkl")
-
     
         if not os.path.exists(idx_path) or not os.path.exists(doc_path) or not os.path.exists(frequency):
             
