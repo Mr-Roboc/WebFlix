@@ -28,6 +28,10 @@ class InvertedIndex:
         self.term_frequencies = {} #  keeping track of how many times each term appears in each document
         self.doc_lengths: dict[int, int] = {}
         self.doc_lengths_path= os.path.join(CACHE_DIR,"doc_lengths.pkl")
+        self.idx_path = os.path.join(CACHE_DIR,"index.pkl")
+        self.doc_path = os.path.join(CACHE_DIR,"docmap.pkl")
+        self.frequency = os.path.join(CACHE_DIR,"term_frequencies.pkl")
+    
         
 
 
@@ -40,11 +44,8 @@ class InvertedIndex:
 
 
     def load(self):
-        idx_path = os.path.join(CACHE_DIR,"index.pkl")
-        doc_path = os.path.join(CACHE_DIR,"docmap.pkl")
-        frequency = os.path.join(CACHE_DIR,"term_frequencies.pkl")
-    
-        if not os.path.exists(idx_path) or not os.path.exists(doc_path) or not os.path.exists(frequency):
+        
+        if not os.path.exists(self.idx_path) or not os.path.exists(self.doc_path) or not os.path.exists(self.frequency):
             
             raise FileNotFoundError("The file cannot be found")
         
@@ -116,31 +117,30 @@ class InvertedIndex:
 
 
     def idf(self, term:str)->float:
-        # 1. Load the index and docmap into memory using your class method
+        
         try:
             self.load()
         except FileNotFoundError:
             print("Error: The index files were not found. Please run 'build' first.")
             
 
-        # 2. Extract the clean, single string token from the tokenized list
+        
         tokens = self.tokenize_term(term)
         if not tokens:
             print("Error: Provided term produced no valid tokens.")
             return
         t = tokens
 
-        # 3. Calculate total documents (N) from the docmap
+        
         doc_count = len(self.docmap)
 
-        # 4. Safely get Document Frequency (DF). Fallback to empty set if token is missing.
+        # Safely get Document Frequency (DF). Fallback to empty set if token is missing.
         matching_docs = self.index.get(t, set())
         df_count = len(matching_docs)
 
-        # 5. Apply the corrected smoothed IDF formula
+    
         IDF = math.log((doc_count + 1) / (df_count + 1))
 
-        # 6. Print the final calculated value
         return IDF
 
 
@@ -191,7 +191,6 @@ class InvertedIndex:
         Calculates the length-normalized BM25 Term Frequency component.
         Assumes load() has already been called before running queries.
         """
-
         
         doc_id = int(doc_id)  # Guard against string IDs from CLI
         tf = self.tf(doc_id, term)
@@ -205,9 +204,6 @@ class InvertedIndex:
 
         return (tf * (k1 + 1)) / (tf + k1 * length_norm)
 
-        
-        
-        
         
             
 
@@ -257,12 +253,8 @@ class InvertedIndex:
             self.load()
 
         query_tokenize = tokenize_text(query)
-        print(query_tokenize)
 
-        scores = {}
-
-    
-    
+        scores = {}    
 
         for doc_id in self.docmap:
              total_score = 0.0
@@ -289,7 +281,6 @@ class InvertedIndex:
                      
 
             
-        
 
 def bm25_tf_command(doc_id: int, term: str, k1: float = BM25_K1,b = BM25_B):
 
@@ -309,8 +300,7 @@ def build_command() -> None:
     idx.build()
     idx.save()
     
-   #
-
+   
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
 
