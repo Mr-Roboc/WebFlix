@@ -41,7 +41,7 @@ class InvertedIndex:
 
     def load(self):
 
-        
+
         frequency = os.path.join(CACHE_DIR,"term_frequencies.pkl")
 
         
