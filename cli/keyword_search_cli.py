@@ -79,7 +79,7 @@ def main() -> None:
             )
 
         case "bm25search":
-            results = idx.bm25_search(args.query, limit=args.limit)
+            results = idx.bm25_search(args.query, args.limit)
             for i, (movie, score) in enumerate(results, 1):
                 print(f"{i}. ({movie['id']}) {movie['title']} - Score: {score:.2f}")
             
