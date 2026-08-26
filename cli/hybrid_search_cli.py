@@ -1,6 +1,6 @@
 import argparse
 
-from lib.hybrid_search import normalize_score,weighted_search
+from lib.hybrid_search import normalize_score,weighted_search,rrf_search
 def main()->None:
     parser= argparse.ArgumentParser(description= "Hybrid Search")
 
@@ -18,7 +18,13 @@ def main()->None:
     weighted_search_parser.add_argument("--alpha", type = float, help = "Parameter to control the weight between BM25 and semantic")
     weighted_search_parser.add_argument("--limit",type = int,help = "THe limit for results")
 
+    rrf_search_parser = subparsers.add_parser("rrf-search",help="Reciprocal rank fusion")
+    rrf_search_parser.add_argument("query",help="input query")
+    rrf_search_parser.add_argument("-k",type = int,help ="Contant parameter")
+    rrf_search_parser.add_argument("--limit",type = int,help ="Result limit")
+
     
+
     
     
 
@@ -38,6 +44,8 @@ def main()->None:
             weighted_search(args.query,args.alpha,args.limit)
              
 
+        case "rrf-search":
+            rrf_search(args.query,args.k,args.limit)
 
             
 

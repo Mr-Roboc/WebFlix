@@ -30,11 +30,29 @@ def weighted_search(query, alpha=0.5, limit=5):
         print(f"  {desc_snippet}")
 
 
+def rrf_search(query,k:int,limit:int):
+    movies = load_movies()
+    h = HybridSearch(movies)
+
+    rrf_result = h.rrf_search(query,k = 60,limit = 5)
+
+    sorted_result = sorted(rrf_result.values(),key=lambda x: x['rrf_score'],reverse=True)
+
+    for idx,result in enumerate(sorted_result[:limit]):
+        print(f"{idx}. {result['doc_title']}")
+        print(f"RRF Score:{result['rrf_score']:.3f}")
+        print(f"BM25 Rank: {result['bm25_rank']}, Semantic Rank: {result['semantic_rank']}\n ")
+
+
+
+
+
+
 class HybridSearch:
     def __init__(self,documents:list[dict])->None:
         self.documents = documents
         self.semantic_search = ChunkedSemanticSearch()
-        self.semantic_search.load_or_create_chunk_embeddings(documents) # Creating the chunked embeddings for the document
+        self.semantic_search.load_or_create_chunk_embeddings(documents) 
         self.idx = InvertedIndex()
 
         if not os.path.exists(self.idx.idx_path):
@@ -62,8 +80,64 @@ class HybridSearch:
 
 
     def rrf_search(self,query:str,k:int,limit:int=10) ->list[dict]:
-        raise NotImplementedError("RRF search is not implemented yet")
 
+        
+        bm25_search_result = self._bm25_search(query,limit*500)
+
+        semantic_chunk_result= self.semantic_search.search_chunks(query,limit*500)
+
+
+        return combine_rrf_search(bm25_search_result,semantic_chunk_result,k)
+
+
+
+
+
+def combine_rrf_search(bm25_search_result,semantic_chunk_result,k)->dict:
+
+
+    combined = {}
+    for rank, (doc,_) in enumerate(bm25_search_result,start = 1):
+        doc_id = doc['id']
+        doc_title = doc['title']
+        
+        rrf_comp= rrf_score(rank,k)
+
+        combined[doc_id]= {
+            'doc_title':doc_title,
+            'bm25_rank':rank,
+            'semantic_rank':0,
+            'rrf_score': rrf_comp
+        }
+
+    for rank,doc in enumerate(semantic_chunk_result,start=1):
+        doc_id= doc['id']
+        doc_title = doc['title']
+        
+        semantic_rrf = rrf_score(rank,k)
+
+        if doc_id in combined:
+            combined[doc_id]['rrf_score'] +=semantic_rrf
+            combined[doc_id]['semantic_rank'] = rank
+
+        else:
+            combined[doc_id]={
+                'doc_title':doc_title,
+                 'bm25_rank':0,
+                 'semantic_rank':rank,
+                 'rrf_score':semantic_rrf
+            }
+
+
+    return combined
+
+
+    
+
+
+
+def rrf_score(rank:int, k:int = 60)->float:
+    return 1/(k+rank)
 
 
 
