@@ -1,50 +1,0 @@
-[?25l[?2004h╭─────────────────────────────────────────────────────────────╮
-│ ⣽  Running: uv run cli/keyword_search_cli.py search "Great" │
-╰┬────────────────────────────────────────────────────────────╯
-[3A
-│ ⣻  Running: uv run cli/keyword_search_cli.py search "Great" │
-
-[3A [J[2K[?2004l[?25h[?1002l[?1003l[?1006l╭──────────────────────────────────────────────────────────╮
-│ Running: uv run cli/keyword_search_cli.py search "Great" │
-╰┬─────────────────────────────────────────────────────────╯
- ├─  ?  Expect exit code 0
- ├─  ?  Expect stdout to contain all of:    
- │       - 'The Great Valley Adventure'     
- │       - 'The First Great Train Robbery'  
-
- > Command exit code: 0
- > Command stdout:
-
-Before the Devil Knows You're Dead
-The Chronicles of Narnia: Prince Caspian
-S1m0ne
-Ask the Dust
-Blue Jasmine
-Evil Aliens
-The One I Love
-Fear, Inc.
-Pride & Prejudice
-Cairo Time
-Sense and Sensibility
-Warrior
-Fedora
-The Duellists
-L'ultimo squalo
-Deadpool
-Beerfest
-Tabu: A Story of the South Seas
-Astro Boy tetsuwan atomu
-The Haunting in Connecticut 2: Ghosts of Georgia
-Dracula Untold
-The Most Dangerous Game
-Pinky Dinky Doo
-The Queen
-Mosura
-Terror Train
-Count Dracula
-Barbarossa
-Raees
-Busman's Honeymoon
-Creepshow
-Earth vs. the Flying Saucers
-... output visually truncated, full output captured
