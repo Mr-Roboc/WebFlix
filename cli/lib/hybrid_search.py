@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 
-from lib.search_utils import load_movies
+from .search_utils import load_movies
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 
@@ -17,9 +17,9 @@ def weighted_search(query, alpha=0.5, limit=5):
     limit_int = int(limit)
     results = hs.weighted_search(query, alpha, limit_int)
 
-    for idx, r in enumerate(results[:limit_int]):
+    for idx, r in enumerate(results[:limit_int],start=1):
         
-        print(f"{idx + 1}. {r['title']}")
+        print(f"{idx}. {r['title']}")
         
         
         print(f"  Hybrid Score: {r['hybrid_score']:.3f}")

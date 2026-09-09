@@ -1,6 +1,7 @@
 import argparse
 
 from lib.hybrid_search import normalize_score,weighted_search,rrf_search
+from test_llm import llm_query
 def main()->None:
     parser= argparse.ArgumentParser(description= "Hybrid Search")
 
@@ -19,13 +20,11 @@ def main()->None:
     weighted_search_parser.add_argument("--limit",type = int,help = "THe limit for results")
 
     rrf_search_parser = subparsers.add_parser("rrf-search",help="Reciprocal rank fusion")
+    rrf_search_parser.add_argument("--enhance",type=str,choices=['spell'],help="Query  enhancement methdod")
     rrf_search_parser.add_argument("query",help="input query")
     rrf_search_parser.add_argument("-k",type = int,help ="Contant parameter")
     rrf_search_parser.add_argument("--limit",type = int,help ="Result limit")
 
-    
-
-    
     
 
     args = parser.parse_args()
@@ -45,9 +44,14 @@ def main()->None:
              
 
         case "rrf-search":
-            rrf_search(args.query,args.k,args.limit)
+            if args.enhance:
+                llm_response = llm_query(args.query)
+
+                print(f"Enhanced query (SPELL): '{args.query}' -> '{llm_response}'\n")
 
             
+            rrf_search(llm_response,args.k,args.limit)
+       
 
 
 
