@@ -21,8 +21,9 @@ def main()->None:
 
     rrf_search_parser = subparsers.add_parser("rrf-search",help="Reciprocal rank fusion")
     rrf_search_parser.add_argument("--enhance",type=str,choices=['spell','rewrite','expand'],help="Query  enhancement methdod")
+    rrf_search_parser.add_argument("--rerank_method", type=str,choices=['individual'],help = 'individual rerank')
     rrf_search_parser.add_argument("query",help="input query")
-    rrf_search_parser.add_argument("-k",type = int,help ="Contant parameter")
+    rrf_search_parser.add_argument("-k",type = int,help ="Constant parameter")
     rrf_search_parser.add_argument("--limit",type = int,help ="Result limit")
 
     
@@ -60,7 +61,13 @@ def main()->None:
                 expand_response = llm_query(args.query,args.enhance)
                 print(f"Enhanced query (EXPAND): '{args.query}' --> '{expand_response}'\n")
                 rrf_search(expand_response,args.k,args.limit)
-       
+
+
+            elif args.rerank_method=="individual":
+                rrf_search(args.query,args.k,args.limit*5)
+                
+
+                
 
 
 

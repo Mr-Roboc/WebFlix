@@ -1,4 +1,5 @@
 import os
+import re
 
 
 from openai import OpenAI
@@ -15,6 +16,8 @@ client = OpenAI(
     api_key=api_key,
 )
 
+
+model_id = "meta-llama/llama-3.3-70b-instruct"
 def llm_query(user_query:str,enhance):
 
     if enhance=="spell":
@@ -94,11 +97,76 @@ Examples:
         
         
 
-    model_id = "meta-llama/llama-3.3-70b-instruct"
+    
 
     response  = client.chat.completions.create(messages=messages,model = model_id)
     return response.choices[0].message.content
     
 
 
+def llm_rerank_query(query: str, doc: dict):
 
+    messages = [
+        {
+            "role": "system",
+            "content": """You are a movie search relevance scorer.
+
+Your task is to score how relevant a movie is to a user's search query.
+
+Scoring:
+10 = Perfect match
+9 = Extremely relevant
+8 = Very relevant
+7 = Relevant
+6 = Somewhat relevant
+5 = Weakly relevant
+4 = Slightly relevant
+3 = Barely relevant
+2 = Very poor match
+1 = Almost completely irrelevant
+0 = Completely irrelevant
+
+Consider:
+- The user's intent
+- The movie title
+- The movie description
+- How directly the movie satisfies the query
+
+Be discriminative. Do not give the same score to every movie.
+
+Output ONLY one integer from 0 to 10."""
+        },
+
+        {
+            "role": "user",
+            "content": f"""
+Search query:
+{query}
+
+Movie title:
+{doc.get("doc_title", "")}
+
+Movie description:
+{doc.get("document", "")}
+
+Score:"""
+        }
+    ]
+
+    response = client.chat.completions.create(
+        messages=messages,
+        model=model_id
+    )
+
+    raw_response = response.choices[0].message.content.strip()
+
+    print(f"LLM response: {raw_response}")
+
+    match = re.search(r'\b(10|[0-9])\b', raw_response)
+
+    if not match:
+        raise ValueError(
+            f"Could not extract score from LLM response: {raw_response}"
+        )
+
+    return float(match.group(1))

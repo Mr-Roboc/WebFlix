@@ -4,7 +4,7 @@ from collections import defaultdict
 from .search_utils import load_movies
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
-
+from test_llm import llm_rerank_query
 
 
 def weighted_search(query, alpha=0.5, limit=5):
@@ -31,18 +31,53 @@ def weighted_search(query, alpha=0.5, limit=5):
 
 
 def rrf_search(query,k:int,limit:int):
+    RETRIEVAL_LIMIT = 25
     movies = load_movies()
     h = HybridSearch(movies)
 
-    rrf_result = h.rrf_search(query,k = 60,limit = 5)
+
+    rrf_result = h.rrf_search(query,k ,RETRIEVAL_LIMIT)
+    
 
     sorted_result = sorted(rrf_result.values(),key=lambda x: x['rrf_score'],reverse=True)
 
-    for idx,result in enumerate(sorted_result[:limit]):
+    reranked_results = []
+
+
+    # LLM Re_rank result
+    for idx, result in enumerate(sorted_result[:RETRIEVAL_LIMIT], 1):
+        print(f"Reranking {idx}/{RETRIEVAL_LIMIT}: {result['doc_title']}")
+        score = llm_rerank_query(query, result)
+        result['rerank_score'] = score
+        reranked_results.append(result)
+        
+
+    reranked_results.sort(key=lambda x : x["rerank_score"],
+    reverse=True
+    )
+
+    print(
+        f"\nRe-ranking top {RETRIEVAL_LIMIT} candidates "
+        f"using individual method..."
+    )
+
+    print(
+        f"Reciprocal Rank Fusion Results for "
+        f"'{query}' (k={k}):\n"
+    )
+
+
+
+    for idx,result in enumerate(reranked_results[:limit],1):
+        print(f"Reranking {idx}/{RETRIEVAL_LIMIT}: {result['doc_title']}")
+
+
         print(f"{idx}. {result['doc_title']}")
+        print(f"Re-rank score: {result['rerank_score']:.3f}")
         print(f"RRF Score:{result['rrf_score']:.3f}")
         print(f"BM25 Rank: {result['bm25_rank']}, Semantic Rank: {result['semantic_rank']}\n ")
 
+    
 
 
 
