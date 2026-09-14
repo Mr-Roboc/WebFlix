@@ -10,6 +10,5 @@ wheels/
 .venv
 data/
 cache/
-cache/
 .env
 cache/
