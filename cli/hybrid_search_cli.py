@@ -20,7 +20,7 @@ def main()->None:
     weighted_search_parser.add_argument("--limit",type = int,help = "THe limit for results")
 
     rrf_search_parser = subparsers.add_parser("rrf-search",help="Reciprocal rank fusion")
-    rrf_search_parser.add_argument("--enhance",type=str,choices=['spell'],help="Query  enhancement methdod")
+    rrf_search_parser.add_argument("--enhance",type=str,choices=['spell','rewrite','expand'],help="Query  enhancement methdod")
     rrf_search_parser.add_argument("query",help="input query")
     rrf_search_parser.add_argument("-k",type = int,help ="Contant parameter")
     rrf_search_parser.add_argument("--limit",type = int,help ="Result limit")
@@ -34,7 +34,7 @@ def main()->None:
             parser.print_help()
 
         case "normalize":
-            norm_scores = normalize_scores(args.scores)
+            norm_scores = normalize_score(args.scores)
 
             for norm_score in norm_scores:
                 print(f"* {norm_score:.4f}")
@@ -44,13 +44,22 @@ def main()->None:
              
 
         case "rrf-search":
-            if args.enhance:
-                llm_response = llm_query(args.query)
+            if args.enhance=="spell":
+                llm_response = llm_query(args.query,args.enhance)
 
                 print(f"Enhanced query (SPELL): '{args.query}' -> '{llm_response}'\n")
 
-            
-            rrf_search(llm_response,args.k,args.limit)
+                rrf_search(llm_response.args.k,args.limit)
+
+            elif args.enhance=="rewrite":
+                rewrite_response = llm_query(args.query,args.enhance)
+                print(f"Enhanced query (REWRITE): '{args.query}' --> '{rewrite_response}'\n")
+                rrf_search(rewrite_response,args.k,args.limit)
+
+            elif args.enhance=="expand":
+                expand_response = llm_query(args.query,args.enhance)
+                print(f"Enhanced query (EXPAND): '{args.query}' --> '{expand_response}'\n")
+                rrf_search(expand_response,args.k,args.limit)
        
 
 
