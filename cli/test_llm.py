@@ -4,6 +4,7 @@ import re
 
 from openai import OpenAI
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -14,6 +15,7 @@ if not api_key:
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=api_key,
+    timeout=60.0,
 )
 
 
@@ -104,7 +106,7 @@ Examples:
     
 
 
-def llm_rerank_query(query: str, doc: dict):
+def llm_rerank_query(query: str, doc: list[dict]):
 
     messages = [
         {
@@ -170,3 +172,101 @@ Score:"""
         )
 
     return float(match.group(1))
+
+
+
+
+def llm_rerank_batch(query:str,documents,limit:int):
+    if not documents:
+        return []
+
+
+    doc_map  = {}
+    doc_list:list[str] = []
+
+    for doc in documents:
+        doc_id = doc["id"]
+
+
+        doc_map[doc_id] = doc
+
+        title = doc.get("doc_title", doc.get("title", ""))
+        description = doc.get("document", doc.get("description", ""))
+        doc_list.append(f"{doc_id}: {title} - {description[:200]}")
+
+
+        doc_list_str = "\n".join(doc_list)
+
+    # Batch ranking prompt
+    prompt = f"""Rank the movies listed below by relevance to the following search query.
+
+Query: "{query}"
+
+Movies:
+{doc_list_str}
+
+Return the movie IDs in order of relevance, best match first.
+
+Your response must be a raw JSON array of integers.
+Do not wrap the JSON in Markdown. Do not use a ```json code block.
+Do not include any explanatory text.
+
+For example:
+[75, 12, 34, 2, 1]
+
+Ranking:"""
+
+    # ONE LLM CALL
+    response = client.chat.completions.create(
+        model=model_id,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0,
+        max_tokens=max(64, len(documents) * 5),
+    )
+
+    # Extract response text
+    ranking_text = (
+        response.choices[0].message.content or ""
+    ).strip()
+
+    # Be tolerant of models that still wrap valid JSON in a code fence.
+    if ranking_text.startswith("```"):
+        ranking_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", ranking_text).strip()
+
+    # Convert JSON string → Python list
+    parsed_ids = json.loads(ranking_text)
+
+    # Rebuild documents in LLM ranking order
+    reranked = []
+
+    seen_ids = set()
+    for i, doc_id in enumerate(parsed_ids):
+        if doc_id in doc_map:
+            seen_ids.add(doc_id)
+            reranked.append(
+                {
+                    **doc_map[doc_id],
+                    "batch_rank": i + 1
+                }
+            )
+
+    # Keep any valid candidates omitted by the model instead of silently
+    # shrinking the result set.
+    for doc in documents:
+        if doc["id"] not in seen_ids:
+            reranked.append({**doc, "batch_rank": len(reranked) + 1})
+
+    # Return only the requested number
+    return reranked[:limit]
+     
+
+
+     
+
+
+     

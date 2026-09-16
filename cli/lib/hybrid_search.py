@@ -30,52 +30,25 @@ def weighted_search(query, alpha=0.5, limit=5):
         print(f"  {desc_snippet}")
 
 
-def rrf_search(query,k:int,limit:int):
-    RETRIEVAL_LIMIT = 25
+def rrf_search(query,k:int,limit:int,rerank_method:str=None):
+
     movies = load_movies()
     h = HybridSearch(movies)
 
 
-    rrf_result = h.rrf_search(query,k ,RETRIEVAL_LIMIT)
+    rrf_result = h.rrf_search(query,k)
     
 
     sorted_result = sorted(rrf_result.values(),key=lambda x: x['rrf_score'],reverse=True)
 
-    reranked_results = []
+    if rerank_method == 'individual' or rerank_method =="batch":
+        return sorted_result[:limit]
 
-
-    # LLM Re_rank result
-    for idx, result in enumerate(sorted_result[:RETRIEVAL_LIMIT], 1):
-        print(f"Reranking {idx}/{RETRIEVAL_LIMIT}: {result['doc_title']}")
-        score = llm_rerank_query(query, result)
-        result['rerank_score'] = score
-        reranked_results.append(result)
-        
-
-    reranked_results.sort(key=lambda x : x["rerank_score"],
-    reverse=True
-    )
-
-    print(
-        f"\nRe-ranking top {RETRIEVAL_LIMIT} candidates "
-        f"using individual method..."
-    )
-
-    print(
-        f"Reciprocal Rank Fusion Results for "
-        f"'{query}' (k={k}):\n"
-    )
-
-
-
-    for idx,result in enumerate(reranked_results[:limit],1):
-        print(f"Reranking {idx}/{RETRIEVAL_LIMIT}: {result['doc_title']}")
-
-
-        print(f"{idx}. {result['doc_title']}")
-        print(f"Re-rank score: {result['rerank_score']:.3f}")
-        print(f"RRF Score:{result['rrf_score']:.3f}")
-        print(f"BM25 Rank: {result['bm25_rank']}, Semantic Rank: {result['semantic_rank']}\n ")
+    else:
+        for idx,result in enumerate(sorted_result[:limit],1):
+            print(f"{idx}. {result['doc_title']}")
+            print(f"RRF Score:{result['rrf_score']:.3f}")
+            print(f"BM25 Rank: {result['bm25_rank']}, Semantic Rank: {result['semantic_rank']}\n ")
 
     
 
@@ -139,7 +112,9 @@ def combine_rrf_search(bm25_search_result,semantic_chunk_result,k)->dict:
         rrf_comp= rrf_score(rank,k)
 
         combined[doc_id]= {
+            'id': doc_id,
             'doc_title':doc_title,
+            'document': doc.get('description', ''),
             'bm25_rank':rank,
             'semantic_rank':0,
             'rrf_score': rrf_comp
@@ -157,7 +132,9 @@ def combine_rrf_search(bm25_search_result,semantic_chunk_result,k)->dict:
 
         else:
             combined[doc_id]={
+                'id': doc_id,
                 'doc_title':doc_title,
+                'document': doc.get('description', ''),
                  'bm25_rank':0,
                  'semantic_rank':rank,
                  'rrf_score':semantic_rrf
@@ -214,7 +191,7 @@ def combine_search_results(bm25_results,semantic_results):
     for norm in bm25_norm:
         doc_id = norm['id']
         combined_norm[doc_id] = {
-            "doc_id": doc_id,
+            "id": doc_id,
             "bm25_score": norm['normalized_score'],
             'sem_score':0,
             'title': norm['title'],
@@ -227,7 +204,7 @@ def combine_search_results(bm25_results,semantic_results):
         doc_id = norm['id']
         if doc_id not in combined_norm:
             combined_norm[doc_id] = {
-                'doc_id':doc_id,
+                'id':doc_id,
                 'bm25_score':0.0,
                 'sem_score':0.0,
                 'title': norm.get('title',''),
@@ -264,6 +241,5 @@ def normalize_score(scores):
     score_range = max_score-min_score
 
     return [(score-min_score)/score_range for score in scores]
-
 
 
