@@ -37,11 +37,12 @@ def rrf_search(query,k:int,limit:int,rerank_method:str=None):
 
 
     rrf_result = h.rrf_search(query,k)
-    
+
 
     sorted_result = sorted(rrf_result.values(),key=lambda x: x['rrf_score'],reverse=True)
 
-    if rerank_method == 'individual' or rerank_method =="batch":
+
+    if rerank_method == 'individual' or rerank_method =="batch" or rerank_method=="cross_encoder":
         return sorted_result[:limit]
 
     else:

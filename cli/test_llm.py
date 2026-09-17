@@ -6,6 +6,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import json
 
+
+from sentence_transformers import CrossEncoder
+
 load_dotenv()
 api_key = os.environ.get("OPENROUTER_API_KEY")
 
@@ -266,7 +269,35 @@ Ranking:"""
      
 
 
-     
+def cross_encoder_func(query: str, document: list[dict], limit: int) -> list[dict]:
+    """Score documents and return the top results with their metadata."""
+    cross_encode = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
+
+    pairs = []
+    for doc in document:
+        pairs.append([query, f"{doc.get('doc_title', '')} - {doc.get('document', '')[:10]}"])
+
+    # returns a list of numbers for each pair
+    scores = cross_encode.predict(pairs)# numpy array.
+
+    ranked_data = sorted(
+        (
+            {
+                **doc,
+                "cross_encoder_score": float(score),
+            }
+            for doc, score in zip(document, scores)
+        ),
+        key=lambda result: result["cross_encoder_score"],
+        reverse=True,
+    )
+
+    return ranked_data[:limit]
+
+  
+
+
+
 
 
      

@@ -1,7 +1,7 @@
 import argparse
 
 from lib.hybrid_search import normalize_score,weighted_search,rrf_search
-from test_llm import llm_query,llm_rerank_batch,llm_rerank_query
+from test_llm import llm_query,llm_rerank_batch,llm_rerank_query,cross_encoder_func
 def main()->None:
     parser= argparse.ArgumentParser(description= "Hybrid Search")
 
@@ -21,7 +21,7 @@ def main()->None:
 
     rrf_search_parser = subparsers.add_parser("rrf-search",help="Reciprocal rank fusion")
     rrf_search_parser.add_argument("--enhance",type=str,choices=['spell','rewrite','expand'],help="Query  enhancement methdod")
-    rrf_search_parser.add_argument("--rerank_method", type=str,choices=['individual','batch'],help = 'individual rerank')
+    rrf_search_parser.add_argument("--rerank_method", type=str,choices=['individual','batch','cross_encoder'],help = 'individual rerank')
     rrf_search_parser.add_argument("query",help="input query")
     rrf_search_parser.add_argument("-k",type = int,help ="Constant parameter")
     rrf_search_parser.add_argument("--limit",type = int,help ="Result limit")
@@ -123,12 +123,41 @@ def main()->None:
                     print(f"RRF Score:{result['rrf_score']:.3f}")
                     print(f"BM25 Rank: {result['bm25_rank']}, Semantic Rank: {result['semantic_rank']}\n ")
 
-               
 
+            elif args.rerank_method=="cross_encoder":
+                RETRIEVAL_LIMIT = args.limit*5
+                rrf_search_result = rrf_search(args.query,args.k,RETRIEVAL_LIMIT,"cross_encoder")
+                cross_encoder_results = cross_encoder_func(
+                    args.query,
+                    rrf_search_result,
+                    args.limit,
+                )
 
+                print(
+                    f"\nRe-ranking top {RETRIEVAL_LIMIT} results "
+                    f"using cross_encoder method..."
+                )
+                print(
+                    f"Reciprocal Rank Fusion Results for "
+                    f"'{args.query}' (k={args.k}):\n"
+                )
 
-                
+                for idx, result in enumerate(cross_encoder_results, 1):
+                    print(f"{idx}. {result['doc_title']}")
+                    print(
+                        f"   Cross Encoder Score: "
+                        f"{result['cross_encoder_score']:.3f}"
+                    )
+                    print(f"   RRF Score: {result['rrf_score']:.3f}")
+                    print(
+                        f"   BM25 Rank: {result['bm25_rank']}, "
+                        f"Semantic Rank: {result['semantic_rank']}"
+                    )
 
+                    description = result.get("document", "")
+                    if len(description) > 100:
+                        description = description[:100] + "..."
+                    print(f"   {description}\n")
 
 if __name__ == "__main__":
     main()
