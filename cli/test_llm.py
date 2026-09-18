@@ -264,21 +264,21 @@ Ranking:"""
         if doc["id"] not in seen_ids:
             reranked.append({**doc, "batch_rank": len(reranked) + 1})
 
-    # Return only the requested number
+ 
     return reranked[:limit]
      
 
 
 def cross_encoder_func(query: str, document: list[dict], limit: int) -> list[dict]:
-    """Score documents and return the top results with their metadata."""
+  
     cross_encode = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
 
     pairs = []
     for doc in document:
-        pairs.append([query, f"{doc.get('doc_title', '')} - {doc.get('document', '')[:10]}"])
+        pairs.append([query, f"{doc.get('doc_title', '')} - {doc.get('document', '')}"])
 
     # returns a list of numbers for each pair
-    scores = cross_encode.predict(pairs)# numpy array.
+    scores = cross_encode.predict(pairs)
 
     ranked_data = sorted(
         (

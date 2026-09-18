@@ -1,11 +1,16 @@
 import os
 from collections import defaultdict
+from functools import lru_cache
 
 from .search_utils import load_movies
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from test_llm import llm_rerank_query
 
+# Ensures the model is loaded once for the entire process.
+@lru_cache(maxsize=1)
+def _get_hybrid_search():
+    return HybridSearch(load_movies())
 
 def weighted_search(query, alpha=0.5, limit=5):
     if isinstance(query, list):
@@ -32,8 +37,7 @@ def weighted_search(query, alpha=0.5, limit=5):
 
 def rrf_search(query,k:int,limit:int,rerank_method:str=None):
 
-    movies = load_movies()
-    h = HybridSearch(movies)
+    h = _get_hybrid_search()
 
 
     rrf_result = h.rrf_search(query,k)
@@ -242,5 +246,3 @@ def normalize_score(scores):
     score_range = max_score-min_score
 
     return [(score-min_score)/score_range for score in scores]
-
-
