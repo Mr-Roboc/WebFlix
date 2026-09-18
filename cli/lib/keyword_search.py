@@ -167,7 +167,9 @@ class InvertedIndex:
 
         
     def bm25idf(self,term)->float:
-        single_term = self.tokenize_term(term)
+        # bm25_search() passes terms that have already been tokenized and
+        # stemmed by tokenize_text(). Do not tokenize them a second time.
+        single_term = term
 
         if not single_term:
             return 0.0
@@ -208,17 +210,12 @@ class InvertedIndex:
             
 
     def tokenize_term(self, TERM):
-        
-        try:
-            term_tokenize = tokenize_text(TERM)
+        term_tokens = tokenize_text(TERM)
 
-            if not (len(term_tokenize)) == 1:
-                raise ValueError("No single token recieved ")
+        if len(term_tokens) != 1:
+            return None
 
-            return term_tokenize[0] # returning the token as a string
-
-        except Exception as e:
-            print(f"Error: {e}")
+        return term_tokens[0]
 
     def tf(self, doc_id, term) -> int:
 
