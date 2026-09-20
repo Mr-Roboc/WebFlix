@@ -1,4 +1,5 @@
 import os
+import logging
 from collections import defaultdict
 from functools import lru_cache
 
@@ -6,6 +7,21 @@ from .search_utils import load_movies
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from test_llm import llm_rerank_query
+
+logger = logging.getLogger("rrf_search")
+
+
+def _result_debug_summary(results: list[dict], preview_limit: int = 10) -> list[dict]:
+    """Return compact result data suitable for debug logs."""
+    return [
+        {
+            "id": result.get("id"),
+            "title": result.get("doc_title", result.get("title", "")),
+            "rrf_score": result.get("rrf_score"),
+        }
+        for result in results[:preview_limit]
+    ]
+
 
 # Ensures the model is loaded once for the entire process.
 @lru_cache(maxsize=1)
@@ -39,11 +55,14 @@ def rrf_search(query,k:int,limit:int,rerank_method:str=None):
 
     h = _get_hybrid_search()
 
-
     rrf_result = h.rrf_search(query,k)
-
-
     sorted_result = sorted(rrf_result.values(),key=lambda x: x['rrf_score'],reverse=True)
+    logger.debug(
+        "Results after RRF search for query %r (%d candidates): %s",
+        query,
+        len(sorted_result),
+        _result_debug_summary(sorted_result),
+    )
 
 
     if rerank_method == 'individual' or rerank_method =="batch" or rerank_method=="cross_encoder":
