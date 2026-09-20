@@ -47,14 +47,24 @@ def main()->None:
 
         recall = len(matching_titles)/total_relevant
 
+
+
+        # Calculating the F1 score.
+
+        F1_score = 2*(precision*recall)/(precision + recall)
+
         print(
             f"- Query: {query}\n"
             f"  - Precision@{limit}: {precision:.4f}\n"
             f"  - Recall@{limit}: {recall:.4f}\n"
             f"  - Retrieved: {', '.join(retrieved)}\n"
+            f"  - F1 Score: {F1_score:.4f}\n"
             f"  - Relevant: {', '.join(relevant)}\n"
-        )
 
+
+
+
+        )
 
 
 
