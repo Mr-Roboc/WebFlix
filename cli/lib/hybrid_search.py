@@ -68,12 +68,17 @@ def rrf_search(query,k:int,limit:int,rerank_method:str=None):
     if rerank_method == 'individual' or rerank_method =="batch" or rerank_method=="cross_encoder":
         return sorted_result[:limit]
 
+
+
+
     else:
         for idx,result in enumerate(sorted_result[:limit],1):
             print(f"{idx}. {result['doc_title']}")
             print(f"RRF Score:{result['rrf_score']:.3f}")
             print(f"BM25 Rank: {result['bm25_rank']}, Semantic Rank: {result['semantic_rank']}\n ")
 
+
+    return sorted_result[:limit]
     
 
 

@@ -3,8 +3,7 @@ import logging
 
 from lib.hybrid_search import normalize_score,weighted_search,rrf_search
 from lib.search_utils import DEFAULT_SEARCH_LIMIT, RRF_K, SEARCH_MULTIPLIER
-from test_llm import llm_query,llm_rerank_batch,llm_rerank_query,cross_encoder_func
-
+from test_llm import llm_query,llm_rerank_batch,llm_rerank_query,cross_encoder_func,evaluate_llm
 
 logger = logging.getLogger("rrf_search")
 
@@ -63,8 +62,10 @@ def main()->None:
         dest="rerank_method",
         type=str,
         choices=['individual','batch','cross_encoder'],
-        help='individual rerank',
+        help='individual,batch or cross_encoder reranking',
     )
+    rrf_search_parser.add_argument("--evaluate", type=bool,help="LLM evaluation")
+
     rrf_search_parser.add_argument("query",help="input query")
     rrf_search_parser.add_argument("-k",type = int,default=RRF_K,help ="Constant parameter")
     rrf_search_parser.add_argument("--limit",type = int,default=DEFAULT_SEARCH_LIMIT,help ="Result limit")
@@ -107,6 +108,8 @@ def main()->None:
                 print(f"Enhanced query (EXPAND): '{args.query}' --> '{expand_response}'\n")
 
             logger.debug("Query after enhancements: %r", search_query)
+
+            
 
             if args.rerank_method=="individual":
                 RETRIEVAL_LIMIT = args.limit * SEARCH_MULTIPLIER
@@ -209,6 +212,16 @@ def main()->None:
                     if len(description) > 100:
                         description = description[:100] + "..."
                     print(f"   {description}\n")
+
+
+            if args.evaluate:
+                result = rrf_search(search_query,args.k,args.limit)
+                evaluate_result = evaluate_llm(search_query,result)
+
+                for idx,results in enumerate(evaluate_result,1):
+                    print(f"{idx}. {results['doc_title']}: {results['score']}")
+
+
 
             else:
                 rrf_search(search_query, args.k, args.limit)
