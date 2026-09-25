@@ -296,8 +296,192 @@ def cross_encoder_func(query: str, document: list[dict], limit: int) -> list[dic
 
   
 
+def evaluate_llm(query,document):
+
+
+    formatted_result = []
+
+    for doc in document:
+        doc_id = doc["id"]
+
+        title = doc["doc_title"]
+        description = doc["document"][:50]
+
+        formatted_result.append(f"{doc_id}: {title} - {description}")
+
+    
+    prompt=f"""Rate how relevant each result is to this query on a 0-3 scale:
+
+Query: "{query}"
+
+Results:
+{chr(10).join(formatted_result)}
+
+Scale:
+- 3: Highly relevant
+- 2: Relevant
+- 1: Marginally relevant
+- 0: Not relevant
+
+Do NOT give any numbers other than 0, 1, 2, or 3.
+
+Return ONLY the scores in the same order you were given the documents. Return a valid JSON list, nothing else. For example:
+
+[2, 0, 3, 2, 0, 1]"""
+
+    response = client.chat.completions.create(
+
+    model = model_id,
+    messages = [{
+        "role":"user",
+        "content":prompt
+    }
+    ],
+    temperature=0
+
+    )
+
+
+    response_text = (response.choices[0].message.content or "").strip()
+
+    if response_text.startswith("```"):
+            response_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", response_text).strip()
+    
+
+    parsed_response = json.loads(response_text)
+
+    if not isinstance(parsed_response, list):
+        raise ValueError("LLM evaluation response must be a JSON list")
+
+    if len(parsed_response) != len(document):
+        raise ValueError(
+            "LLM evaluation returned "
+            f"{len(parsed_response)} scores for {len(document)} documents"
+        )
+
+    score_docs = []
+    for doc, score in zip(document, parsed_response):
+
+        if score not in (0, 1, 2, 3):
+            
+            raise ValueError(f"Invalid LLM relevance score: {score!r}")
+
+      
+        score_docs.append({**doc, "score": score})
+
+    return score_docs
 
 
 
 
-     
+
+def rag_llm(query:str,search_results:list[dict]) -> str:
+    docs = [f"Title: {doc['doc_title']} , Description: {doc['document']}" for doc in search_results]
+
+    docs_string = "\n---\n".join(docs)
+
+    prompt = f"""You are a RAG agent for Webflix, a movie streaming service.
+Your task is to provide a natural-language answer to the user's query based on documents retrieved during search.
+Provide a comprehensive answer that addresses the user's query.
+
+Query: {query}
+
+Documents:
+{docs_string}
+
+Answer:"""
+
+    messages = [
+
+        {
+        "role":"system",
+        "content": prompt
+
+        }
+]
+
+    response = client.chat.completions.create(model=model_id,messages=messages,temperature=0)
+
+    return (response.choices[0].message.content or "").strip()
+
+
+
+
+def llm_summarize(query,search_results:list[dict]) -> str:
+    results = [f"Title: {doc['doc_title']} , Description: {doc['document']}" for doc in search_results]
+    
+    results_string = "\n---\n".join(results)
+
+
+
+    prompt = f"""Provide information useful to the query below by synthesizing data from multiple search results in detail.
+
+The goal is to provide comprehensive information so that users know what their options are.
+Your response should be information-dense and concise, with several key pieces of information about the genre, plot, etc. of each movie.
+
+This should be tailored to Webflix users. Webflix is a movie streaming service.
+
+Query: {query}
+
+Search results:
+{results_string}
+
+Provide a comprehensive 3–4 sentence answer that combines information from multiple sources:"""
+
+    response = client.chat.completions.create(
+
+    model = model_id,
+    messages = [{
+        "role":"system",
+        "content":prompt
+    }
+    ],
+    temperature=0
+
+    )
+
+
+    return (response.choices[0].message.content or "").strip()
+
+    
+
+
+def llm_citations(query,documents):
+    results = [f"Title: {doc['doc_title']} , Description: {doc['document']}" for doc in documents]
+        
+    results_string = "\n---\n".join(results)
+
+    
+
+    prompt = f"""Answer the query below and give information based on the provided documents.
+
+The answer should be tailored to users of Webflix, a movie streaming service.
+If not enough information is available to provide a good answer, say so, but give the best answer possible while citing the sources available.
+
+Query: {query}
+
+Documents:
+{results_string}
+
+Instructions:
+- Provide a comprehensive answer that addresses the query
+- Cite sources in the format [1], [2], etc. when referencing information
+- If sources disagree, mention the different viewpoints
+- If the answer isn't in the provided documents, say "I don't have enough information"
+- Be direct and informative
+
+Answer:"""
+
+
+    response= client.chat.completions.create(
+    model= model_id,
+
+    messages = [{
+    "role":"system",
+    "content":prompt
+}],
+temperature= 0
+    )
+
+
+    return (response.choices[0].message.content or "").strip()
