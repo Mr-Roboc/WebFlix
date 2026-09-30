@@ -1,6 +1,7 @@
 import os
 import re
 
+import pickle
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -408,9 +409,16 @@ Answer:"""
 
 
 def llm_summarize(query,search_results:list[dict]) -> str:
-    results = [f"Title: {doc['doc_title']} , Description: {doc['document']}" for doc in search_results]
     
-    results_string = "\n---\n".join(results)
+    results = [
+        {
+            "id": doc.get("id"),
+            "title": doc.get("doc_title", ""),
+            "description": doc.get("document", ""),
+        }
+        for doc in search_results
+    ]
+    results_string = json.dumps(results, ensure_ascii=False, indent=2)
 
 
 
@@ -423,10 +431,10 @@ This should be tailored to Webflix users. Webflix is a movie streaming service.
 
 Query: {query}
 
-Search results:
+Search results (a JSON array; each object is one distinct movie):
 {results_string}
 
-Provide a comprehensive 3–4 sentence answer that combines information from multiple sources:"""
+Provide a comprehensive 3–4 sentence answer that synthesizes the most relevant movies. Clearly name each movie when referring to it, and do not combine details from different movies:"""
 
     response = client.chat.completions.create(
 
@@ -450,6 +458,7 @@ def llm_citations(query,documents):
     results = [f"Title: {doc['doc_title']} , Description: {doc['document']}" for doc in documents]
         
     results_string = "\n---\n".join(results)
+        
 
     
 
@@ -485,3 +494,50 @@ temperature= 0
 
 
     return (response.choices[0].message.content or "").strip()
+
+
+def llm_questions(question,documents):
+    results = [f"Title: {doc['doc_title']} , Description: {doc['document']}" for doc in documents]
+            
+    context = "\n---\n".join(results)
+
+
+    prompt = f"""Answer the user's question based on the provided movies that are available on Webflyx, a streaming service.
+
+Question: {question}
+
+Documents:
+{context}
+
+Instructions:
+- Answer questions directly and concisely
+- Be casual and conversational
+- Don't be cringe or hype-y
+- Talk like a normal person would in a chat conversation
+
+Answer:"""
+
+    
+    response= client.chat.completions.create(
+    model= model_id,
+
+    messages = [{
+    "role":"system",
+    "content":prompt
+}],
+temperature= 0
+    )
+
+
+    return (response.choices[0].message.content or "").strip()
+
+
+
+
+
+
+
+
+
+
+

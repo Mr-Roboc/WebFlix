@@ -2,7 +2,7 @@ import argparse
 
 
 from lib.hybrid_search import rrf_search
-from test_llm import rag_llm,llm_summarize,llm_citations
+from test_llm import rag_llm,llm_summarize,llm_citations,llm_questions
 def main() ->None:
     parser = argparse.ArgumentParser(description="Retrieval Augmented Generation")
     subparsers = parser.add_subparsers(dest="command", help ="Available commands")
@@ -22,7 +22,9 @@ def main() ->None:
     citations.add_argument("--limit",type=int,default =5, help ="Result limit")
 
 
-
+    questions = subparsers.add_parser("question",help = "Enter a question ")
+    questions.add_argument("query",type=str,help = "Enter the query")
+    questions.add_argument("--limit",type= int,default= 5)
 
 
 
@@ -45,6 +47,13 @@ def main() ->None:
             rrf_result = rrf_search(args.query,k=60,limit=args.limit)
 
             print(llm_citations(args.query,rrf_result))
+
+
+
+        case "question":
+            rrf_result = rrf_search(args.query,k=60,limit= args.limit)
+            print(llm_questions(args.query,rrf_result))
+        
 
 
 
