@@ -16,8 +16,7 @@ def main() -> None:
 
 
     parser = argparse.ArgumentParser(description="Multimodal Search")
-    parser.add_argument("--image", help="Path to the image file")
-    parser.add_argument("--query", help="Query to rewrite based on image")
+    
     subparser = parser.add_subparsers(dest="command", help="Available commands")
 
     multimodal = subparser.add_parser("image", help="Add Image")

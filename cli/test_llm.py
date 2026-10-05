@@ -496,6 +496,8 @@ temperature= 0
     return (response.choices[0].message.content or "").strip()
 
 
+
+
 def llm_questions(question,documents):
     results = [f"Title: {doc['doc_title']} , Description: {doc['document']}" for doc in documents]
             
@@ -530,14 +532,4 @@ temperature= 0
 
 
     return (response.choices[0].message.content or "").strip()
-
-
-
-
-
-
-
-
-
-
 
