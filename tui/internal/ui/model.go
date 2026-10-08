@@ -25,7 +25,8 @@ var (
 	errColor    = lipgloss.Color("#f85149")
 	borderColor = lipgloss.Color("#58a6ff")
 
-	bannerStyle = lipgloss.NewStyle().Foreground(accent).Bold(true)
+	brandStyle  = lipgloss.NewStyle().Foreground(accent).Bold(true)
+	descStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#e6edf3")).Bold(true)
 	hintStyle   = lipgloss.NewStyle().Foreground(muted)
 	userStyle   = lipgloss.NewStyle().Foreground(userColor).Bold(true)
 	sysStyle    = lipgloss.NewStyle().Foreground(muted)
@@ -292,16 +293,14 @@ func (m Model) View() string {
 	if !m.ready {
 		return "loading..."
 	}
-	banner := bannerStyle.Render(renderBanner())
-	hint := hintStyle.Render("  A Gemini-style search bar for movies. Type / to switch engines.")
+	header := renderHeader(m.width)
 	palette := ""
 	if m.paletteOpen() {
 		palette = m.renderPalette()
 	}
 	input := boxStyle.Width(max(m.width-2, 20)).Render(m.input.View())
 	footer := footerStyle.Render(m.footer())
-	head := banner + "\n" + hint
-	parts := []string{head, m.viewport.View()}
+	parts := []string{header, m.viewport.View()}
 	if palette != "" {
 		parts = append(parts, palette)
 	}
@@ -309,17 +308,23 @@ func (m Model) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
-func renderBanner() string {
+func renderHeader(width int) string {
+	logo := brandStyle.Render(strings.Join([]string{
+		"██╗   ██╗███████╗██████╗ ███████╗██╗     ██╗██╗  ██╗",
+		"██║   ██║██╔════╝██╔══██╗██╔════╝██║     ██║╚██╗██╔╝",
+		"██║ █╗ ██║█████╗  ██████╔╝█████╗  ██║     ██║ ╚███╔╝ ",
+		"██║███╗██║██╔══╝  ██╔══██╗██╔══╝  ██║     ██║ ██╔██╗ ",
+		"╚███╔███╔╝███████╗██████╔╝██║     ███████╗██║██╔╝ ██╗",
+	}, "\n"))
+	description := descStyle.Render("movie search engine")
 	return strings.Join([]string{
-		"  ╭──────────────────────────────────────────╮",
-		"  │  ✦  W E B F L I X                        │",
-		"  │     movie search engine                  │",
-		"  ╰──────────────────────────────────────────╯",
+		lipgloss.PlaceHorizontal(width, lipgloss.Center, logo),
+		lipgloss.PlaceHorizontal(width, lipgloss.Center, description),
 	}, "\n")
 }
 
 func (m *Model) layout() {
-	chrome := 12
+	chrome := 13
 	if m.paletteOpen() {
 		chrome += 9
 	}
@@ -405,15 +410,125 @@ func (m *Model) addError(text string) {
 }
 
 func (m *Model) addResponse(resp *search.Response) {
+	switch resp.Mode {
+	case "keyword":
+		m.addKeywordResponse(resp)
+	case "semantic":
+		m.addSemanticResponse(resp)
+	case "weighted":
+		m.addWeightedResponse(resp)
+	case "hybrid":
+		m.addHybridResponse(resp)
+	case "rag", "summarize", "citation", "question":
+		m.addGeneratedResponse(resp)
+	default:
+		m.addDefaultResponse(resp)
+	}
+}
+
+func (m *Model) addKeywordResponse(resp *search.Response) {
+	m.lines = append(m.lines, sysStyle.Render("Searching for: "+resp.Query))
+	for _, r := range resp.Results {
+		m.lines = append(m.lines, titleStyle.Render(fmt.Sprintf("%d. (%d) %s", r.Rank, r.ID, r.Title)))
+	}
+}
+
+func (m *Model) addSemanticResponse(resp *search.Response) {
+	for i, r := range resp.Results {
+		m.lines = append(m.lines, titleStyle.Render(fmt.Sprintf("%d %s : Score : %v", i, r.Title, r.Score)))
+	}
+}
+
+func (m *Model) addWeightedResponse(resp *search.Response) {
+	for _, r := range resp.Results {
+		m.lines = append(m.lines,
+			titleStyle.Render(fmt.Sprintf("%d. %s", r.Rank, r.Title)),
+			scoreStyle.Render(fmt.Sprintf("  Hybrid Score: %.3f", r.HybridScore)),
+			scoreStyle.Render(fmt.Sprintf("  BM25: %.3f, Semantic: %.3f", r.BM25Score, r.SemScore)),
+			hintStyle.Render(r.Document),
+		)
+	}
+}
+
+func (m *Model) addHybridResponse(resp *search.Response) {
+	m.addEnhancedQuery(resp)
+	if m.rerank == "" {
+		m.addRRFResults(resp)
+		return
+	}
+
+	for _, r := range resp.Results {
+		lines := []string{fmt.Sprintf("%d. %s", r.Rank, r.Title)}
+		switch m.rerank {
+		case "individual":
+			lines = append(lines,
+				fmt.Sprintf("Reranking: %.3f/10", r.RerankScore),
+				fmt.Sprintf("RRF Score:%.3f", r.RRFScore),
+				fmt.Sprintf("BM25 Rank: %d, Semantic Rank: %d", r.BM25Rank, r.SemanticRank),
+			)
+		case "batch":
+			lines = append(lines,
+				fmt.Sprintf("Batch rank: %d", r.BatchRank),
+				fmt.Sprintf("RRF Score:%.3f", r.RRFScore),
+				fmt.Sprintf("BM25 Rank: %d, Semantic Rank: %d", r.BM25Rank, r.SemanticRank),
+			)
+		case "cross_encoder":
+			lines = append(lines,
+				fmt.Sprintf("   Cross Encoder Score: %.3f", r.CrossEncoderScore),
+				fmt.Sprintf("   RRF Score: %.3f", r.RRFScore),
+				fmt.Sprintf("   BM25 Rank: %d, Semantic Rank: %d", r.BM25Rank, r.SemanticRank),
+				"   "+r.Document,
+			)
+		}
+		for _, line := range lines {
+			m.lines = append(m.lines, titleStyle.Render(line))
+		}
+		m.lines = append(m.lines, "")
+	}
+}
+
+func (m *Model) addGeneratedResponse(resp *search.Response) {
+	m.addRRFResults(resp)
+	if resp.Mode == "summarize" {
+		m.lines = append(m.lines, "", sysStyle.Render(" LLM Summary: "), "")
+	}
+	if strings.TrimSpace(resp.Answer) != "" {
+		m.lines = append(m.lines, wrap(resp.Answer, max(m.width-4, 40)))
+	}
+}
+
+func (m *Model) addEnhancedQuery(resp *search.Response) {
+	if resp.EnhancedQuery == "" || resp.EnhancedQuery == resp.Query {
+		return
+	}
+	arrow := "-->"
+	if strings.EqualFold(m.enhance, "spell") {
+		arrow = "->"
+	}
+	m.lines = append(m.lines, sysStyle.Render(fmt.Sprintf(
+		"Enhanced query (%s): '%s' %s '%s'",
+		strings.ToUpper(m.enhance), resp.Query, arrow, resp.EnhancedQuery,
+	)), "")
+}
+
+func (m *Model) addRRFResults(resp *search.Response) {
+	for _, r := range resp.Results {
+		m.lines = append(m.lines,
+			titleStyle.Render(fmt.Sprintf("%d. %s", r.Rank, r.Title)),
+			scoreStyle.Render(fmt.Sprintf("RRF Score:%.3f", r.RRFScore)),
+			sysStyle.Render(fmt.Sprintf("BM25 Rank: %d, Semantic Rank: %d", r.BM25Rank, r.SemanticRank)),
+			"",
+		)
+	}
+
+}
+
+func (m *Model) addDefaultResponse(resp *search.Response) {
 	if resp.EnhancedQuery != "" && resp.EnhancedQuery != resp.Query {
 		m.lines = append(m.lines, sysStyle.Render("enhanced › "+resp.EnhancedQuery))
 	}
 	if strings.TrimSpace(resp.Answer) != "" {
 		m.lines = append(m.lines, titleStyle.Render("answer"), wrap(resp.Answer, max(m.width-4, 40)))
-	}
-	if len(resp.Results) == 0 {
-		m.lines = append(m.lines, hintStyle.Render("No results."))
-		return
 	}
 	for _, r := range resp.Results {
 		title := fmt.Sprintf("%d. %s", r.Rank, r.Title)
